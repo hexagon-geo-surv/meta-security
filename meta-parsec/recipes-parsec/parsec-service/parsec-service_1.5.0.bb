@@ -11,9 +11,8 @@ SRC_URI += "crate://crates.io/parsec-service/${PV} \
             file://parsec_init \
             file://systemd.patch \
             file://parsec-tmpfiles.conf \
-            file://0002-Fix-unnecessary-qualifications-error.patch \
 "
-SRC_URI[parsec-service-1.4.1.sha256sum] = "06ad906fb13d6844ad676d4203a1096ae4efc87fe1abcea0481c507df56d8c98"
+SRC_URI[parsec-service-1.5.0.sha256sum] = "819f1f658a1c62fee1b4986fe33232d5dc539b37ae0933981e02737ad7fb570f"
 
 B = "${CARGO_VENDORING_DIRECTORY}/${BP}"
 
@@ -21,12 +20,12 @@ PACKAGECONFIG ??= "PKCS11 MBED-CRYPTO"
 have_TPM = "${@bb.utils.contains('DISTRO_FEATURES', 'tpm2', 'TPM', '', d)}"
 PACKAGECONFIG:append = " ${@bb.utils.contains('BBFILE_COLLECTIONS', 'tpm-layer', '${have_TPM}', '', d)}"
 
-PACKAGECONFIG[ALL] = "-F all-providers -F cryptoki/generate-bindings -F tss-esapi/generate-bindings,,tpm2-tss libts,tpm2-tss libtss2-tcti-device libts"
 PACKAGECONFIG[TPM] = "-F tpm-provider -F tss-esapi/generate-bindings,,tpm2-tss,tpm2-tss libtss2-tcti-device"
 PACKAGECONFIG[PKCS11] = "-F pkcs11-provider -F cryptoki/generate-bindings,"
 PACKAGECONFIG[MBED-CRYPTO] = "-F mbed-crypto-provider,"
 PACKAGECONFIG[CRYPTOAUTHLIB] = "-F cryptoauthlib-provider,"
-PACKAGECONFIG[TS] = "-F trusted-service-provider,,libts,libts"
+# Current version of Parsec is not compatible with the current version of Trusted Services
+#PACKAGECONFIG[TS] = "-F trusted-service-provider,,libts protobuf-native,libts"
 
 export BINDGEN_EXTRA_CLANG_ARGS
 target = "${@d.getVar('TARGET_SYS').replace('-', ' ')}"
@@ -74,9 +73,9 @@ do_install () {
 inherit useradd
 USERADD_PACKAGES = "${PN}"
 GROUPADD_PARAM:${PN} = "-r parsec"
-USERADD_PARAM:${PN} = "-r -g parsec -s /bin/false -d ${localstatedir}/lib/parsec parsec"
+USERADD_PARAM:${PN} = "-r -g parsec -s /usr/sbin/nologin -d ${localstatedir}/lib/parsec parsec"
 GROUPMEMS_PARAM:${PN} = "${@bb.utils.contains('PACKAGECONFIG_CONFARGS', 'tpm-provider', '-a parsec -g tss ;', '', d)}"
-GROUPMEMS_PARAM:${PN} += "${@bb.utils.contains('PACKAGECONFIG_CONFARGS', 'trusted-service-provider', '-a parsec -g teeclnt', '', d)}"
+GROUPMEMS_PARAM:${PN} += "${@bb.utils.contains('PACKAGECONFIG_CONFARGS', 'trusted-service-provider', '-a parsec -g tee', '', d)}"
 
 FILES:${PN} += " \
     ${sysconfdir}/parsec/config.toml \
@@ -92,4 +91,3 @@ require parsec-service-crates.inc
 # upstream to fix this.
 # https://github.com/parallaxsecond/parsec/issues/645
 INSANE_SKIP:${PN}-dbg += "buildpaths"
-
