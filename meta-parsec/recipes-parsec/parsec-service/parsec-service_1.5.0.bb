@@ -72,9 +72,22 @@ do_install () {
 inherit useradd
 USERADD_PACKAGES = "${PN}"
 GROUPADD_PARAM:${PN} = "-r parsec"
-USERADD_PARAM:${PN} = "-r -g parsec -s /usr/sbin/nologin -d ${localstatedir}/lib/parsec parsec"
-GROUPMEMS_PARAM:${PN} = "${@bb.utils.contains('PACKAGECONFIG_CONFARGS', 'tpm-provider', '-a parsec -g tss ;', '', d)}"
-GROUPMEMS_PARAM:${PN} += "${@bb.utils.contains('PACKAGECONFIG_CONFARGS', 'trusted-service-provider', '-a parsec -g tee', '', d)}"
+USERADD_PARAM:${PN} = "\
+    --system \
+    --gid parsec \
+    --shell /usr/sbin/nologin \
+    --home-dir ${localstatedir}/lib/parsec \
+    ${@parsec_groups(d)} \
+    parsec"
+
+def parsec_groups(d):
+    groups = []
+    config = d.getVar("PACKAGECONFIG").split()
+    if "TPM" in config:
+        groups.append("tss")
+    if "TS" in config:
+        groups.append("teeclnt")
+    return "--groups " + ",".join(groups) if groups else ""
 
 FILES:${PN} += " \
     ${sysconfdir}/parsec/config.toml \
