@@ -86,7 +86,7 @@ def parsec_groups(d):
     if "TPM" in config:
         groups.append("tss")
     if "TS" in config:
-        groups.append("teeclnt")
+        groups.append("tee")
     return "--groups " + ",".join(groups) if groups else ""
 
 FILES:${PN} += " \
